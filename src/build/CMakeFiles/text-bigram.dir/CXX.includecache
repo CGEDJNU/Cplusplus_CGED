@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/text-bigram.cc
+cnn/nodes.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/nodes.h
+cnn/cnn.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/cnn.h
+cnn/training.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/training.h
+cnn/timing.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/timing.h
+cnn/rnn.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/rnn.h
+cnn/gru.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/gru.h
+cnn/lstm.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/lstm.h
+cnn/dict.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/dict.h
+cnn/expr.h
+/mnt/hpc5/home/zhanghaipeng/main/CGED-project/src/cnn/expr.h
+iostream
+-
+fstream
+-
+sstream
+-
+string
+-
+boost/archive/text_iarchive.hpp
+-
+boost/archive/text_oarchive.hpp
+-
+boost/program_options.hpp
+-
+set
+-
+

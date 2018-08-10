@@ -1,0 +1,1 @@
+/usr/bin/c++      CMakeFiles/text-bigram.dir/text-bigram.cc.o  -o text-bigram -rdynamic -lcnn 
