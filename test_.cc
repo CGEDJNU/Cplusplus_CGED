@@ -16,6 +16,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/program_options.hpp>
 #include <set>
+#include <vector>
 using namespace std;
 using namespace cnn;
 namespace po = boost::program_options;
@@ -200,7 +201,6 @@ void init_command_line(int argc, char* argv[], po::variables_map* conf) {
     ("training_data", po::value<std::string>(), "The path to the training data.")
     ("devel_data", po::value<std::string>(), "The path to the development data.")
     ("testing_data", po::value<std::string>(), "The path to the testing data.")
-    ("pretrained", po::value<std::string>()->default_value(""), "The path to the pretrained bigram word embedding.")
     ("model_name", po::value<std::string>(), "The path to the model of this training phase.")
     ("model_file", po::value<string>()->default_value(""), "The path to the model which was trained before.")
     ("layers", po::value<int>()->default_value(1), "number of LSTM layers")
@@ -279,6 +279,43 @@ void readFile(string fileName, vector<Sentence> &data) {
   cerr << lc << " lines, " << toks << " tokens, " << endl;
   cerr << "word, pos tag:" << wordToIndex.size() << " " << posToIndex.size() << " " << tagToIndex.size() << endl;
 }
+
+void readStr(string sentence, vector<Sentence> &data) {
+    int lc = 0;
+    //input: [目&B-nt&O 前&I-nt&O ...]
+    vector<string> words = split(sentence, ' ');
+    vector<string> temp;
+    temp.push_back("<SOS>");
+    for (int i = 0; i < words.size(); ++i) {
+      vector<string> item = split(words[i], '&');
+      temp.push_back(item[0]);
+    }
+    temp.push_back("<EOS>");
+    data.push_back(Sentence());
+    for (int i = 0; i < words.size(); ++i) {
+      vector<string> item = split(words[i], '&');
+      string lb = temp[i] + temp[i + 1];
+      string rb = temp[i + 1] + temp[i + 2];
+      if (wordToIndex.find(lb) == wordToIndex.end()) {
+        wordToIndex.insert(make_pair(lb, wordToIndex.size()));
+      }
+      if (wordToIndex.find(rb) == wordToIndex.end()) {
+        wordToIndex.insert(make_pair(rb, wordToIndex.size()));
+      }
+      if (charToIndex.find(item[0]) == charToIndex.end()) {
+        charToIndex.insert(make_pair(item[0], charToIndex.size()));
+      }
+      if (posToIndex.find(item[1]) == posToIndex.end()) {
+        posToIndex.insert(make_pair(item[1], posToIndex.size()));
+      }
+      if (tagToIndex.find(item[2]) == tagToIndex.end()) {
+        indexToTag.push_back(item[2]);
+        tagToIndex.insert(make_pair(item[2], tagToIndex.size()));
+      }
+      data[lc].addInstance(charToIndex[item[0]], wordToIndex[lb], wordToIndex[rb], posToIndex[item[1]], tagToIndex[item[2]]);
+    }//for
+}
+
 
 void readEmbedding(string fileName) {
   ifstream in(fileName);
@@ -384,12 +421,15 @@ void runOnDev(RNNLanguageModel<LSTMBuilder> &lm, const Model &model, const vecto
 
 void doPredict(RNNLanguageModel<LSTMBuilder> &lm, const Model &model, const vector<Sentence> dev, const string &logName) {
   ofstream out(logName);
+  cout << "dev.size:" << dev.size() << endl;
+  cout << "here" << endl;
   double dloss = 0.0;
   double dcorr = 0.0;
   double dtags = 0.0;
   eval = true;
   for (int i = 0; i < dev.size(); ++i) {
-    ComputationGraph cg;
+    
+     ComputationGraph cg;
     vector<int> pt;
     lm.BuildTaggingGraph(dev[i], cg, dcorr, dtags, &pt);
     for (int j = 0; j < pt.size(); ++j) {
@@ -408,7 +448,6 @@ int main(int argc, char** argv) {
   string trainName = conf["training_data"].as<string>();
   string devName = conf["devel_data"].as<string>();
   string testName = conf["testing_data"].as<string>();
-  string embeddingName = conf["pretrained"].as<string>();
   string modelName = conf["model_name"].as<string>();
   INPUT_DIM = conf["input_dim"].as<int>();
   HIDDEN_DIM = conf["hidden_dim"].as<int>();
@@ -431,11 +470,14 @@ int main(int argc, char** argv) {
   readFile(devName, dev);
 
   cout << "Reading testing data from " << devName << "..." << endl;
-
-  readFile(devName, test);
-
-  cout << "Reading embedding data from " << embeddingName << "..." << endl;
-  readEmbedding(embeddingName);
+  devName = "然&B-c&O 后&I-c&O 原&B-a&O 始&I-a&O 时&B-n&O 代&I-n&O 的&B-u&O 人&B-n&O 们&I-n&O 之&B-nd&O 间&I-nd&O 开&B-v&O 始&I-v&O 出&B-v&O 现&I-v&O 矛&B-a&O 盾&I-a&O 了&B-u&O 。&B-wp&O";
+  readStr(devName, test);
+  //readFile(devName, test);
+    cout << test[0].ch[0] << endl;
+    cout << test[0].ch[1] << endl;
+    cout << test[0].ch[2] << endl;
+    cout << test[0].ch[3] << endl;
+    cout << test[0].ch[4] << endl;
 
   int maxIteration = 100;
   int numInstances = train.size(); //Math.min(2000, trainX.size());
@@ -509,8 +551,8 @@ int main(int argc, char** argv) {
   ifstream in(modelName);
   boost::archive::text_iarchive ia(in);
   ia >> model;
-
   doPredict(lm, model, test, logName);
+  cout << "end" << endl;
   //delete sgd;
 }
 
