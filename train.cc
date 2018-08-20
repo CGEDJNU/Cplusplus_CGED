@@ -430,9 +430,9 @@ int main(int argc, char** argv) {
 
   readFile(devName, dev);
 
-  cout << "Reading testing data from " << devName << "..." << endl;
+  cout << "Reading testing data from " << testName << "..." << endl;
 
-  readFile(devName, test);
+  readFile(testName, test);
 
   cout << "Reading embedding data from " << embeddingName << "..." << endl;
   readEmbedding(embeddingName);
@@ -442,13 +442,13 @@ int main(int argc, char** argv) {
   maxIteration = conf["maxiter"].as<int>();
   numInstances = numInstances;
 
-  //Model model;
-  //bool useMomentum = false;
-  //Trainer* sgd = nullptr;
-  //if (useMomentum)
-  //  sgd = new MomentumSGDTrainer(&model);
-  //else
-  //  sgd = new SimpleSGDTrainer(&model);
+  Model model;
+  bool useMomentum = false;
+  Trainer* sgd = nullptr;
+  if (useMomentum)
+    sgd = new MomentumSGDTrainer(&model);
+  else
+    sgd = new SimpleSGDTrainer(&model);
 
 
   ALL_CHAR_SIZE = charToIndex.size();
@@ -459,58 +459,56 @@ int main(int argc, char** argv) {
   TAG_SIZE = tagToIndex.size();
   if (usingPos) INPUT_DIM += posToIndex.size();
 
-  //RNNLanguageModel<LSTMBuilder> lm(model);
-  //if (conf["model_file"].as<string>() != "") {
-  //  ifstream in(conf["model_file"].as<string>());
-  //  boost::archive::text_iarchive ia(in);
-  //  ia >> model;
-  //}
-  //vector<int> order;
-  //for (int i = 0; i < train.size(); i++)
-  //  order.push_back(i);
-
-  //for (int i = 0; i < indexToTag.size(); i++)
-  //  cout << indexToTag[i] << endl;
-  //int last = getCurTime();
-  //int tot = last;
-  //for (int iteration = 0; iteration < maxIteration; ++iteration) {
-  //  double loss = 0.0;
-  //  double correct = 0.0;
-  //  double ttags = 0.0;
-  //  random_shuffle(order.begin(), order.end());
-
-  //  for (int i = 0; i < order.size(); i++) {
-  //    {
-  //      int index = order[i];
-  //      ComputationGraph cg;
-  //      lm.BuildTaggingGraph(train[index], cg, correct, ttags);
-  //      loss += as_scalar(cg.incremental_forward());
-  //      cg.backward();
-  //      sgd->update(1.0);
-  //    }
-  //    if (i + iteration > 0 && i % 5000 == 0) {
-  //      runOnDev(lm, model, dev, modelName);
-  //    }
-  //    if (i + iteration > 0 && i % 50 == 0) {
-  //      cerr << "E = " << (loss / ttags) << " ppl = " << exp(loss / ttags)
-  //        << " (acc = " << (correct / ttags) << ")" << " iterations : " << iteration
-  //        << " lines : " << i << "[consume = " << (getCurTime() - last) / 1000.0 << "s]" << endl;;
-  //      last = getCurTime();
-  //    }
-  //  }
-  //  sgd->update_epoch();
-  //  cerr << "Iteration Time : " << (getCurTime() - tot) / 1000.0 << "s]" << endl;
-  //  tot = getCurTime();
-  //}
-
-  Model model;
   RNNLanguageModel<LSTMBuilder> lm(model);
+  if (conf["model_file"].as<string>() != "") {
+    ifstream in(conf["model_file"].as<string>());
+    boost::archive::text_iarchive ia(in);
+    ia >> model;
+  }
+  vector<int> order;
+  for (int i = 0; i < train.size(); i++)
+    order.push_back(i);
+
+  for (int i = 0; i < indexToTag.size(); i++)
+    cout << indexToTag[i] << endl;
+  int last = getCurTime();
+  int tot = last;
+  for (int iteration = 0; iteration < maxIteration; ++iteration) {
+    double loss = 0.0;
+    double correct = 0.0;
+    double ttags = 0.0;
+    random_shuffle(order.begin(), order.end());
+
+    for (int i = 0; i < order.size(); i++) {
+      {
+        int index = order[i];
+        ComputationGraph cg;
+        lm.BuildTaggingGraph(train[index], cg, correct, ttags);
+        loss += as_scalar(cg.incremental_forward());
+        cg.backward();
+        sgd->update(1.0);
+      }
+      if (i + iteration > 0 && i % 5000 == 0) {
+        runOnDev(lm, model, dev, modelName);
+      }
+      if (i + iteration > 0 && i % 50 == 0) {
+        cerr << "E = " << (loss / ttags) << " ppl = " << exp(loss / ttags)
+          << " (acc = " << (correct / ttags) << ")" << " iterations : " << iteration
+          << " lines : " << i << "[consume = " << (getCurTime() - last) / 1000.0 << "s]" << endl;;
+        last = getCurTime();
+      }
+    }
+    sgd->update_epoch();
+    cerr << "Iteration Time : " << (getCurTime() - tot) / 1000.0 << "s]" << endl;
+    tot = getCurTime();
+  }
+
 
   ifstream in(modelName);
   boost::archive::text_iarchive ia(in);
   ia >> model;
 
   doPredict(lm, model, test, logName);
-  //delete sgd;
+  delete sgd;
 }
 
